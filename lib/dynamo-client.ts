@@ -7,14 +7,14 @@ import { AWS_CONFIG } from './aws-config';
 
 const client = new DynamoDBClient({
   region: AWS_CONFIG.region,
-  // Credentials auto-resolved:
-  // → On EC2: from IAM Instance Role (JiraClone-EC2-Role)
-  // → Locally: from ~/.aws/credentials (your aws configure)
-  // → Never hardcode credentials here
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
 });
 
 export const docClient = DynamoDBDocumentClient.from(client, {
   marshallOptions: {
-    removeUndefinedValues: true, // Prevents DynamoDB errors on optional fields like imageOriginalUrl
+    removeUndefinedValues: true,
   },
 });

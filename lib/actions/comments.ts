@@ -5,6 +5,7 @@ import { docClient } from '../dynamo-client';
 import { AWS_CONFIG } from '../aws-config';
 import { requireAuth } from '../auth';
 import { Comment } from '../types';
+import { revalidatePath } from 'next/cache';
 
 export async function getComments(taskId: string): Promise<Comment[]> {
   await requireAuth();
@@ -39,6 +40,8 @@ export async function addComment(input: {
     TableName: AWS_CONFIG.tables.comments,
     Item: comment,
   }));
+
+  revalidatePath(`/tasks/${input.taskId}`);
 
   return comment;
 }
