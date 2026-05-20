@@ -1,0 +1,51 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy via SSM to all ASG instances
+        run: |
+          # Query only healthy, InService instances from your ASG
+          INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
+            --auto-scaling-group-names JiraClone-ASG \
+            --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
+            --output text)
+
+          if [ -z "$INSTANCE_IDS" ] || [ "$INSTANCE_IDS" = "None" ]; then
+            echo "Error: No live instances found in ASG 'JiraClone-ASG'. Skipping deployment."
+            exit 1
+          fi
+
+          for INSTANCE_ID in $INSTANCE_IDS; do
+            echo "Deploying to active instance: $INSTANCE_ID"
+            
+            # Format commands as a single line valid JSON array
+            aws ssm send-command \
+              --instance-ids "$INSTANCE_ID" \
+              --document-name "AWS-RunShellScript" \
+              --parameters '{"commands":["cd /app","git fetch --all","git reset --hard origin/main","npm ci","npm run build","cp -r /app/.next/static /app/.next/standalone/.next/static || true","cp -r /app/public /app/.next/standalone/public || true","pm2 restart jira-clone"]}' \
+              --output text
+          done
