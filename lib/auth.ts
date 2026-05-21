@@ -10,21 +10,29 @@ export interface AuthUser {
   fullName: string;
 }
 
-// Create verifier once (cached at module level)
-const verifier = CognitoJwtVerifier.create({
-  userPoolId: AWS_CONFIG.cognito.userPoolId,
-  tokenUse: 'id',
-  clientId: AWS_CONFIG.cognito.clientId,
-});
+// Lazily initialized — only created on the first actual token verification.
+// Avoids fetching Cognito JWKS on cold start for unauthenticated requests.
+let _verifier: ReturnType<typeof CognitoJwtVerifier.create> | null = null;
+function getVerifier() {
+  if (!_verifier) {
+    _verifier = CognitoJwtVerifier.create({
+      userPoolId: AWS_CONFIG.cognito.userPoolId,
+      tokenUse: 'id',
+      clientId: AWS_CONFIG.cognito.clientId,
+    });
+  }
+  return _verifier;
+}
 
 export async function getAuthUser(): Promise<AuthUser | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('id_token')?.value;
 
+    // Short-circuit immediately — no network call needed for unauthenticated users
     if (!token) return null;
 
-    const payload = await verifier.verify(token);
+    const payload = await getVerifier().verify(token);
 
     return {
       userId: payload.sub,

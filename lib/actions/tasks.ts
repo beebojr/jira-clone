@@ -12,6 +12,16 @@ import { Task, TaskStatus } from '../types';
 const snsClient = new SNSClient({ region: AWS_CONFIG.region });
 const cwClient = new CloudWatchClient({ region: AWS_CONFIG.region });
 
+// ==========================================
+// 🛠️ MOCK MODE — only active when MOCK_AWS=true
+// Set MOCK_AWS=true in .env.local to stub out SNS/CloudWatch
+// Remove or leave unset for production / real AWS calls
+// ==========================================
+if (process.env.MOCK_AWS === 'true') {
+  snsClient.send = async () => ({}) as any;
+  cwClient.send = async () => ({}) as any;
+}
+
 // ─── GET TASKS (team-isolated) ────────────────────────────────────────────────
 export async function getTasks(projectId: string): Promise<Task[]> {
   const user = await requireAuth();
