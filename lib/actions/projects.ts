@@ -5,6 +5,7 @@ import { docClient } from '../dynamo-client';
 import { AWS_CONFIG } from '../aws-config';
 import { requireAuth } from '../auth';
 import { Project } from '../types';
+import { revalidatePath } from 'next/cache';
 
 export async function getProjects(): Promise<Project[]> {
   await requireAuth(); // Any authenticated user can list projects
@@ -49,6 +50,15 @@ export async function createProject(input: {
     Item: project,
   }));
 
+  // Debug log to help local dev trace created projects
+  try {
+    // eslint-disable-next-line no-console
+    console.log('[createProject] created project:', project.projectId, project.projectName);
+  } catch (e) {
+    // ignore
+  }
+
+  revalidatePath('/dashboard');
   return project;
 }
 
@@ -76,6 +86,8 @@ export async function updateProject(
     UpdateExpression: `SET ${exprs.join(', ')}`,
     ExpressionAttributeValues: vals,
   }));
+
+  revalidatePath('/dashboard');
 }
 
 export async function deleteProject(projectId: string): Promise<void> {
@@ -89,6 +101,8 @@ export async function deleteProject(projectId: string): Promise<void> {
     TableName: AWS_CONFIG.tables.projects,
     Key: { projectId },
   }));
+
+  revalidatePath('/dashboard');
 }
 
 export async function getTeams(): Promise<{ teamId: string; teamName: string; managerId: string }[]> {
