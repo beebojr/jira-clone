@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getUploadUrl } from "@/lib/actions/upload";
-import { updateTaskImages } from "@/lib/actions/tasks";
 import { Button } from "@/components/ui/button";
 import { Image as ImageIcon, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -36,45 +35,25 @@ export function ImageUpload({ taskId }: ImageUploadProps) {
     setError(null);
     setUploading(true);
     try {
-      const { uploadUrl, key } = await getUploadUrl(taskId, file.name, file.type);
+      const { uploadUrl } = await getUploadUrl(taskId, file.name, file.type);
 
-      // Detect mock mode (local development without S3)
-      const isMockMode = uploadUrl.includes('mock-s3.local');
+      // Upload directly to S3 via pre-signed URL
+      const response = await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
 
-      if (isMockMode) {
-        // In mock mode, skip actual S3 upload and store image URLs directly
-        const mockOriginalUrl = `https://mock-s3.local/${key}`;
-        const mockThumbnailUrl = `https://mock-s3.local/thumb-${key}`;
+      if (!response.ok) throw new Error(`Upload failed (${response.status})`);
 
-        await updateTaskImages(taskId, mockOriginalUrl, mockThumbnailUrl);
-        
-        toast.success("Image stored successfully (mock mode)");
-        setDone(true);
-        
-        // Refresh immediately in mock mode
-        setTimeout(() => {
-          router.refresh();
-          setDone(false);
-        }, 1000);
-      } else {
-        // Real S3 upload
-        const response = await fetch(uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type },
-        });
+      setDone(true);
+      toast.success("Image uploaded! Thumbnail is being generated…");
 
-        if (!response.ok) throw new Error(`Upload failed (${response.status})`);
-
-        setDone(true);
-        toast.success("Image uploaded! Thumbnail is being generated…");
-
-        // Give Lambda time to resize and update DB, then refresh
-        setTimeout(() => {
-          router.refresh();
-          setDone(false);
-        }, 5000);
-      }
+      // Give Lambda time to resize and update DB, then refresh
+      setTimeout(() => {
+        router.refresh();
+        setDone(false);
+      }, 5000);
     } catch (err) {
       const rawMessage = err instanceof Error ? err.message : "Failed to upload image";
       const message = rawMessage.includes("FORBIDDEN")

@@ -14,11 +14,14 @@ const snsClient = new SNSClient({ region: AWS_CONFIG.region });
 const cwClient = new CloudWatchClient({ region: AWS_CONFIG.region });
 
 // ==========================================
-// 🛠️ MOCK MODE (For Local Testing Only)
-// Intercepts AWS calls to prevent CredentialsProviderError
+// 🛠️ MOCK MODE — only active when MOCK_AWS=true
+// Set MOCK_AWS=true in .env.local to stub out SNS/CloudWatch
+// Remove or leave unset for production / real AWS calls
 // ==========================================
-snsClient.send = async () => ({}) as any;
-cwClient.send = async () => ({}) as any;
+if (process.env.MOCK_AWS === 'true') {
+  snsClient.send = async () => ({}) as any;
+  cwClient.send = async () => ({}) as any;
+}
 
 // ─── GET TASKS (team-isolated) ────────────────────────────────────────────────
 export async function getTasks(projectId: string): Promise<Task[]> {
@@ -198,6 +201,7 @@ export async function assignTask(
   const assignedTask = assignResult.Item as Task | undefined;
 
   // ⚠️ SHARED RESOURCE — SNS Publish (Member 5 creates this topic)
+  // Only fires when SNS_TASK_ASSIGNMENTS_TOPIC_ARN is set in .env.local
   // Include teamId in message so activity-logger Lambda can emit a per-team CloudWatch metric
   if (AWS_CONFIG.sns.taskAssignmentsTopic) {
     await snsClient.send(new PublishCommand({
@@ -430,5 +434,44 @@ export async function getUsers(): Promise<{ userId: string; fullName: string; te
     userId: u.userId,
     fullName: u.fullName,
     teamId: u.teamId,
+  }));
+}
+
+// ─── GET RECENT AUDIT LOGS ────────────────────────────────────────────────────
+export async function getRecentAuditLogs(): Promise<{
+  logId: string;
+  taskId: string;
+  userId: string;
+  action: string;
+  timestamp: string;
+  userFullName?: string;
+}[]> {
+  await requireAuth();
+
+  const { Items } = await docClient.send(new ScanCommand({
+    TableName: AWS_CONFIG.tables.auditLogs,
+  }));
+
+  const logs = (Items || []) as {
+    logId: string;
+    taskId: string;
+    userId: string;
+    action: string;
+    timestamp: string;
+  }[];
+
+  // Sort logs by timestamp descending
+  logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  // Get top 10 logs
+  const recentLogs = logs.slice(0, 10);
+
+  // Map user full names
+  const users = await getUsers().catch(() => []);
+  const userMap = new Map(users.map((u) => [u.userId, u.fullName]));
+
+  return recentLogs.map((l) => ({
+    ...l,
+    userFullName: userMap.get(l.userId) || l.userId,
   }));
 }
