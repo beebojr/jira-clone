@@ -153,8 +153,13 @@ export function CreateTaskModal({
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-text-secondary">Priority</label>
               <Select value={form.priority} onValueChange={(v) => { if (v) setForm({ ...form, priority: v as "LOW" | "MEDIUM" | "HIGH" }); }}>
-                <SelectTrigger className="bg-surface-2 border-border-default text-text-primary">
-                  <SelectValue />
+                <SelectTrigger className="w-full bg-surface-2 border-border-default text-text-primary">
+                  <SelectValue>
+                    {(value) => {
+                      if (!value) return "Medium";
+                      return value.charAt(0) + value.slice(1).toLowerCase();
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-surface-1 border-border-default">
                   <SelectItem value="LOW">Low</SelectItem>
@@ -166,8 +171,13 @@ export function CreateTaskModal({
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-text-secondary">Team <span className="text-danger">*</span></label>
               <Select value={form.teamId} onValueChange={(v) => { if (v) setForm({ ...form, teamId: v }); }}>
-                <SelectTrigger className="bg-surface-2 border-border-default text-text-primary">
-                  <SelectValue />
+                <SelectTrigger className="w-full bg-surface-2 border-border-default text-text-primary">
+                  <SelectValue>
+                    {(value) => {
+                      const t = teams.find((team) => team.teamId === value);
+                      return t ? t.teamName : "Select team";
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-surface-1 border-border-default">
                   {teams.map((t) => (
@@ -182,14 +192,20 @@ export function CreateTaskModal({
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-text-secondary">Assignee</label>
               <Select value={form.assigneeId} onValueChange={(v) => { if (v) setForm({ ...form, assigneeId: v }); }}>
-                <SelectTrigger className="bg-surface-2 border-border-default text-text-primary">
-                  <SelectValue placeholder="Select user" />
+                <SelectTrigger className="w-full bg-surface-2 border-border-default text-text-primary">
+                  <SelectValue placeholder="Select user">
+                    {(value) => {
+                      if (!value || value === "unassigned") return <span className="text-text-tertiary italic">Unassigned</span>;
+                      const u = users.find((user) => user.userId === value);
+                      return u ? `${u.fullName} (${u.teamId})` : "Select user";
+                    }}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="bg-surface-1 border-border-default max-h-[200px]">
                   <SelectItem value="unassigned" className="text-text-tertiary italic">Unassigned</SelectItem>
                   {users.map((u) => (
                     <SelectItem key={u.userId} value={u.userId}>
-                      {u.fullName} <span className="text-text-tertiary text-xs">({u.teamId})</span>
+                      {`${u.fullName} (${u.teamId})`}
                     </SelectItem>
                   ))}
                 </SelectContent>

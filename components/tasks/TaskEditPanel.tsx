@@ -112,8 +112,13 @@ export function TaskEditPanel({ task, users }: TaskEditPanelProps) {
           <div className="space-y-1.5">
             <label className="text-sm font-medium text-text-secondary">Priority</label>
             <Select value={priority} onValueChange={(value) => setPriority(value as Task['priority'])}>
-              <SelectTrigger className="bg-surface-2 border-border-default text-text-primary">
-                <SelectValue />
+              <SelectTrigger className="w-full bg-surface-2 border-border-default text-text-primary">
+                <SelectValue>
+                  {(value) => {
+                    if (!value) return "Medium";
+                    return value.charAt(0) + value.slice(1).toLowerCase();
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="bg-surface-1 border-border-default">
                 {priorityOptions.map((value) => (
@@ -144,9 +149,15 @@ export function TaskEditPanel({ task, users }: TaskEditPanelProps) {
             <UserRoundCog className="w-4 h-4 text-text-tertiary" />
             Assignee
           </label>
-          <Select value={assigneeId} onValueChange={setAssigneeId}>
-            <SelectTrigger className="bg-surface-2 border-border-default text-text-primary">
-              <SelectValue placeholder="Select assignee" />
+          <Select value={assigneeId} onValueChange={(val) => setAssigneeId(val || "unassigned")}>
+            <SelectTrigger className="w-full bg-surface-2 border-border-default text-text-primary">
+              <SelectValue placeholder="Select assignee">
+                {(value) => {
+                  if (!value || value === "unassigned") return <span className="text-text-tertiary italic">Unassigned</span>;
+                  const u = users.find((user) => user.userId === value);
+                  return u ? `${u.fullName} (${u.teamId})` : "Select assignee";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent className="bg-surface-1 border-border-default max-h-[240px]">
               <SelectItem value="unassigned" className="text-text-tertiary italic">
@@ -154,7 +165,7 @@ export function TaskEditPanel({ task, users }: TaskEditPanelProps) {
               </SelectItem>
               {users.map((user) => (
                 <SelectItem key={user.userId} value={user.userId}>
-                  {user.fullName} <span className="text-text-tertiary text-xs">({user.teamId})</span>
+                  {`${user.fullName} (${user.teamId})`}
                 </SelectItem>
               ))}
             </SelectContent>

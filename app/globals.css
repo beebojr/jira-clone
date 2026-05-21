@@ -124,19 +124,19 @@
    Vibe: hyper-professional, Linear/Notion-inspired, monochrome-first
    ═══════════════════════════════════════════════════════════════════════ */
 .dark {
-  --background: oklch(0.13 0.005 285);
+  --background: oklch(0.16 0.005 285);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0.005 285);
+  --card: oklch(0.20 0.005 285);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0.005 285);
+  --popover: oklch(0.20 0.005 285);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.24 0.005 285);
+  --secondary: oklch(0.26 0.005 285);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.24 0.005 285);
+  --muted: oklch(0.26 0.005 285);
   --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.24 0.005 285);
+  --accent: oklch(0.26 0.005 285);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 8%);
@@ -147,20 +147,20 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
+  --sidebar: oklch(0.22 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: oklch(0.28 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 
   /* ── App Surfaces (§19 layered elevation) ────────────────────────── */
-  --surface-0: oklch(0.13 0.005 285);   /* Page background */
-  --surface-1: oklch(0.17 0.005 285);   /* Cards, panels */
-  --surface-2: oklch(0.21 0.005 285);   /* Inputs, dropdowns */
-  --surface-3: oklch(0.25 0.005 285);   /* Hover states on inputs */
+  --surface-0: oklch(0.16 0.005 285);   /* Page background */
+  --surface-1: oklch(0.20 0.005 285);   /* Cards, panels */
+  --surface-2: oklch(0.24 0.005 285);   /* Inputs, dropdowns */
+  --surface-3: oklch(0.28 0.005 285);   /* Hover states on inputs */
 
   /* ── Text Hierarchy (§4 Typography) ──────────────────────────────── */
   --text-primary: oklch(0.95 0 0);

@@ -1,5 +1,5 @@
-import { getTasks, getUsers } from "@/lib/actions/tasks";
-import { getTeams, getProject } from "@/lib/actions/projects";
+import { getTasks, getUsers, getMyTasks } from "@/lib/actions/tasks";
+import { getTeams, getProject, getProjects } from "@/lib/actions/projects";
 import { getAuthUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -10,6 +10,7 @@ import { Layers, ArrowLeft, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/lib/actions/auth";
+import { Navbar } from "@/components/Navbar";
 
 function BoardSkeleton() {
   return (
@@ -51,60 +52,26 @@ export default async function BoardPage({
 
   const { projectId } = await params;
 
-  const [tasks, users, teams, project] = await Promise.all([
+  const [tasks, users, teams, project, projects, myTasks] = await Promise.all([
     getTasks(projectId),
     getUsers(),
     getTeams(),
     getProject(projectId),
+    getProjects(),
+    getMyTasks(),
   ]);
 
   return (
     <div className="min-h-screen bg-surface-0 text-text-primary">
-      {/* ── Navigation ───────────────────────────────────────────── */}
-      <nav
-        className="sticky top-0 border-b border-border-default bg-surface-0/80 backdrop-blur-sm px-4 sm:px-6 py-3 flex items-center justify-between"
-        style={{ zIndex: "var(--z-nav)" }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href="/dashboard"
-            className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-surface-2 transition-colors text-text-tertiary hover:text-text-primary flex-shrink-0"
-            style={{ transitionDuration: "var(--transition-fast)" }}
-            title="Back to Dashboard"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="sr-only">Back to Dashboard</span>
-          </Link>
-          <div className="flex items-center gap-2 min-w-0">
-            <Layers className="w-4 h-4 text-brand flex-shrink-0" />
-            <h1 className="text-base sm:text-lg font-semibold tracking-tight truncate">
-              {project?.projectName || "Board"}
-            </h1>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <Badge
-            variant="outline"
-            className="text-text-secondary border-border-default text-xs font-medium hidden sm:inline-flex"
-          >
-            {user.role}
-          </Badge>
-          <form action={signOut}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              title="Sign out"
-              className="text-text-tertiary hover:text-text-primary cursor-pointer transition-colors h-8 w-8 p-0"
-              style={{ transitionDuration: "var(--transition-fast)" }}
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="sr-only">Sign out</span>
-            </Button>
-          </form>
-        </div>
-      </nav>
+      {/* ── Global Navigation ─────────────────────────────────────── */}
+      <Navbar
+        user={user}
+        projects={projects}
+        myTasks={myTasks}
+        currentProjectId={projectId}
+        users={users}
+        teams={teams}
+      />
 
       <main className="px-4 sm:px-6 py-6">
         {/* ── Board Header ─────────────────────────────────────────── */}
@@ -131,6 +98,7 @@ export default async function BoardPage({
             initialTasks={tasks}
             userRole={user.role}
             teams={teams}
+            users={users}
           />
         </Suspense>
       </main>

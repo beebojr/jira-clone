@@ -1,5 +1,6 @@
-import { getTask, getUsers, deleteTask } from "@/lib/actions/tasks";
+import { getTask, getUsers, deleteTask, getMyTasks } from "@/lib/actions/tasks";
 import { getComments } from "@/lib/actions/comments";
+import { getProjects, getTeams } from "@/lib/actions/projects";
 import { getAuthUser } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import { ImageUpload } from "@/components/tasks/ImageUpload";
 import { TaskEditPanel } from "@/components/tasks/TaskEditPanel";
 import { TaskStatusControl } from "@/components/tasks/TaskStatusControl";
 import { signOut } from "@/lib/actions/auth";
+import { Navbar } from "@/components/Navbar";
 
 // Named server action for delete — avoids inline closure issues
 async function handleDeleteTask(taskId: string, projectId: string) {
@@ -47,7 +49,13 @@ export default async function TaskDetailPage({
 
   if (!task) notFound();
 
-  const [comments, users] = await Promise.all([getComments(taskId), getUsers()]);
+  const [comments, users, teams, projects, myTasks] = await Promise.all([
+    getComments(taskId),
+    getUsers(),
+    getTeams(),
+    getProjects(),
+    getMyTasks(),
+  ]);
 
   const isManager = user.role === "MANAGER" || user.role === "ADMIN";
   const isAssigned = task.assigneeId === user.userId;
@@ -62,50 +70,15 @@ export default async function TaskDetailPage({
 
   return (
     <div className="min-h-screen bg-surface-0 text-text-primary">
-      {/* ── Navigation ────────────────────────────────────────────── */}
-      <nav
-        className="sticky top-0 border-b border-border-default bg-surface-0/80 backdrop-blur-sm px-4 sm:px-6 py-3 flex items-center justify-between"
-        style={{ zIndex: "var(--z-nav)" }}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href={`/board/${task.projectId}`}
-            className="flex items-center justify-center w-8 h-8 rounded-lg hover:bg-surface-2 transition-colors text-text-tertiary hover:text-text-primary flex-shrink-0"
-            style={{ transitionDuration: "var(--transition-fast)" }}
-            title="Back to Board"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="sr-only">Back to Board</span>
-          </Link>
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-text-tertiary text-sm hidden sm:inline">
-              Task Details
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <Badge
-            variant="outline"
-            className="text-text-secondary border-border-default text-xs font-medium hidden sm:inline-flex"
-          >
-            {user.role}
-          </Badge>
-          <form action={signOut}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              title="Sign out"
-              className="text-text-tertiary hover:text-text-primary cursor-pointer transition-colors h-8 w-8 p-0"
-              style={{ transitionDuration: "var(--transition-fast)" }}
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="sr-only">Sign out</span>
-            </Button>
-          </form>
-        </div>
-      </nav>
+      {/* ── Global Navigation ─────────────────────────────────────── */}
+      <Navbar
+        user={user}
+        projects={projects}
+        myTasks={myTasks}
+        currentProjectId={task.projectId}
+        users={users}
+        teams={teams}
+      />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* ── Task Header ───────────────────────────────────────────── */}

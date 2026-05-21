@@ -63,7 +63,12 @@ export function TaskStatusControl({ taskId, currentStatus }: TaskStatusControlPr
               currentOption?.color || ""
             }`}
           >
-            <SelectValue />
+            <SelectValue>
+              {(value) => {
+                const opt = STATUS_OPTIONS.find((s) => s.id === value);
+                return opt ? opt.label : value;
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent className="bg-surface-1 border-border-default">
             {STATUS_OPTIONS.map((option) => (
