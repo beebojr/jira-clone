@@ -10,7 +10,6 @@ import {
   LogOut,
   LayoutDashboard,
   CheckSquare,
-  Plus,
   FolderOpen,
   User,
 } from "lucide-react";
@@ -18,10 +17,7 @@ import { AuthUser } from "@/lib/auth";
 import { Project, Task } from "@/lib/types";
 import { signOut } from "@/lib/actions/auth";
 import { CommandPalette } from "./CommandPalette";
-import { CreateTaskModal } from "./tasks/CreateTaskModal";
-import { CreateProjectModal } from "./tasks/CreateProjectModal";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
   user: AuthUser;
@@ -225,23 +221,7 @@ export function Navbar({
             <Search className="w-4 h-4" />
           </button>
 
-          {/* Context-aware Dynamic Create Action Button */}
-          {isManager && (
-            <div className="flex items-center">
-              {currentProjectId && users.length > 0 ? (
-                /* Board view: open Create Task for current board */
-                <CreateTaskModal
-                  projectId={currentProjectId}
-                  userRole={user.role}
-                  users={users}
-                  teams={teams}
-                />
-              ) : (
-                /* Dashboard view: open Create Project if Manager/Admin */
-                <CreateProjectModal userRole={user.role} />
-              )}
-            </div>
-          )}
+          {/* Context-aware Dynamic Create Action Button removed */}
 
           {/* User Profile initials Avatar Dropdown */}
           <div ref={profileRef} className="relative">
@@ -326,31 +306,6 @@ export function Navbar({
         onClose={() => setIsCommandOpen(false)}
         projects={projects}
         myTasks={myTasks}
-        onCreateTask={
-          currentProjectId && users.length > 0
-            ? () => {
-                // If on a project page, we can open the createTask modal via DOM or simulation.
-                // For direct support, we'll let the user see the modal triggered.
-                // We'll search for the DialogTrigger button inside document and click it!
-                setTimeout(() => {
-                  const triggers = document.querySelectorAll("button");
-                  const taskTrigger = Array.from(triggers).find((t) => t.textContent?.includes("New Task"));
-                  if (taskTrigger) taskTrigger.click();
-                }, 100);
-              }
-            : undefined
-        }
-        onCreateProject={
-          isManager
-            ? () => {
-                setTimeout(() => {
-                  const triggers = document.querySelectorAll("button");
-                  const projTrigger = Array.from(triggers).find((t) => t.textContent?.includes("New Project"));
-                  if (projTrigger) projTrigger.click();
-                }, 100);
-              }
-            : undefined
-        }
         userRole={user.role}
       />
     </>
