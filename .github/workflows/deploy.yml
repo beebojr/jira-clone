@@ -28,24 +28,38 @@ jobs:
 
       - name: Deploy via SSM to all ASG instances
         run: |
-          # Query only healthy, InService instances from your ASG
           INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
             --auto-scaling-group-names JiraClone-ASG \
             --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
             --output text)
 
           if [ -z "$INSTANCE_IDS" ] || [ "$INSTANCE_IDS" = "None" ]; then
-            echo "Error: No live instances found in ASG 'JiraClone-ASG'. Skipping deployment."
+            echo "Error: No live instances found in ASG. Skipping."
             exit 1
           fi
 
           for INSTANCE_ID in $INSTANCE_IDS; do
-            echo "Deploying to active instance: $INSTANCE_ID"
-            
-            # Format commands as a single line valid JSON array
+            echo "Deploying to: $INSTANCE_ID"
             aws ssm send-command \
               --instance-ids "$INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
-              --parameters '{"commands":["cd /app","git fetch --all","git reset --hard origin/main","npm ci","npm run build","cp -r /app/.next/static /app/.next/standalone/.next/static || true","cp -r /app/public /app/.next/standalone/public || true","pm2 restart jira-clone"]}' \
+              --timeout-seconds 600 \
+              --parameters 'commands=[
+                "yum update -y",
+                "curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -",
+                "yum install -y nodejs git",
+                "npm install -g pm2",
+                "if [ ! -d /app/.git ]; then git clone https://github.com/beebojr/jira-clone.git /app; fi",
+                "cd /app && git fetch --all && git reset --hard origin/main",
+                "REGION=us-east-1",
+                "cat > /app/.env.local << EOF\nAWS_REGION=us-east-1\nNEXT_PUBLIC_COGNITO_USER_POOL_ID=$(aws ssm get-parameter --name /jiraclone/COGNITO_USER_POOL_ID --with-decryption --query Parameter.Value --output text --region us-east-1)\nNEXT_PUBLIC_COGNITO_CLIENT_ID=$(aws ssm get-parameter --name /jiraclone/COGNITO_CLIENT_ID --with-decryption --query Parameter.Value --output text --region us-east-1)\nDYNAMODB_USERS_TABLE=JiraClone-Users\nDYNAMODB_TEAMS_TABLE=JiraClone-Teams\nDYNAMODB_PROJECTS_TABLE=JiraClone-Projects\nDYNAMODB_TASKS_TABLE=JiraClone-Tasks\nDYNAMODB_COMMENTS_TABLE=JiraClone-Comments\nDYNAMODB_AUDITLOGS_TABLE=JiraClone-AuditLogs\nS3_UPLOADS_BUCKET=$(aws ssm get-parameter --name /jiraclone/S3_UPLOADS_BUCKET --with-decryption --query Parameter.Value --output text --region us-east-1)\nS3_THUMBNAILS_BUCKET=$(aws ssm get-parameter --name /jiraclone/S3_THUMBNAILS_BUCKET --with-decryption --query Parameter.Value --output text --region us-east-1)\nSNS_TASK_ASSIGNMENTS_TOPIC_ARN=$(aws ssm get-parameter --name /jiraclone/SNS_TOPIC_ARN --with-decryption --query Parameter.Value --output text --region us-east-1)\nPORT=3000\nEOF",
+                "cd /app && npm ci",
+                "cd /app && npm run build",
+                "cp -r /app/.next/static /app/.next/standalone/.next/static || true",
+                "cp -r /app/public /app/.next/standalone/public || true",
+                "pm2 describe jira-clone > /dev/null 2>&1 && pm2 restart jira-clone || pm2 start /app/.next/standalone/server.js --name jira-clone",
+                "pm2 save",
+                "pm2 startup systemd -u root --hp /root | bash || true"
+              ]' \
               --output text
           done
