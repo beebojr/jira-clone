@@ -1,51 +1,79 @@
 name: Deploy to EC2
-
 on:
   push:
     branches: [main]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
+          
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
-      - name: Deploy via SSM to all ASG instances
+          
+      - name: Build and Package App
         run: |
-          # Query only healthy, InService instances from your ASG
+          npm ci
+          
+          # Fetch public vars required by Next.js during build time
+          export REGION=us-east-1
+          cat > .env.local << EOF
+          NEXT_PUBLIC_COGNITO_USER_POOL_ID=$(aws ssm get-parameter --name /jiraclone/COGNITO_USER_POOL_ID --with-decryption --query Parameter.Value --output text --region $REGION)
+          NEXT_PUBLIC_COGNITO_CLIENT_ID=$(aws ssm get-parameter --name /jiraclone/COGNITO_CLIENT_ID --with-decryption --query Parameter.Value --output text --region $REGION)
+          EOF
+          
+          # Build the app (runs on powerful GitHub servers)
+          npm run build
+          
+          # Prepare standalone directory for zipping
+          cp -r .next/static .next/standalone/.next/static || true
+          cp -r public .next/standalone/public || true
+          
+          # Zip only the necessary production files
+          cd .next/standalone
+          zip -r ../../app-release.zip .
+          
+      - name: Upload Artifact to S3
+        run: aws s3 cp app-release.zip s3://jiraclone-artifacts-ramy/app-release.zip
+
+      - name: Update Live Instances via SSM
+        run: |
           INSTANCE_IDS=$(aws autoscaling describe-auto-scaling-groups \
             --auto-scaling-group-names JiraClone-ASG \
             --query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
             --output text)
-
-          if [ -z "$INSTANCE_IDS" ] || [ "$INSTANCE_IDS" = "None" ]; then
-            echo "Error: No live instances found in ASG 'JiraClone-ASG'. Skipping deployment."
-            exit 1
-          fi
-
-          for INSTANCE_ID in $INSTANCE_IDS; do
-            echo "Deploying to active instance: $INSTANCE_ID"
             
-            # Format commands as a single line valid JSON array
+          if [ -z "$INSTANCE_IDS" ] || [ "$INSTANCE_IDS" = "None" ]; then
+            echo "No live instances found."
+            exit 0
+          fi
+          
+          for INSTANCE_ID in $INSTANCE_IDS; do
             aws ssm send-command \
               --instance-ids "$INSTANCE_ID" \
               --document-name "AWS-RunShellScript" \
-              --parameters '{"commands":["cd /app","git fetch --all","git reset --hard origin/main","npm ci","npm run build","cp -r /app/.next/static /app/.next/standalone/.next/static || true","cp -r /app/public /app/.next/standalone/public || true","pm2 restart jira-clone"]}' \
+              --timeout-seconds 120 \
+              --parameters 'commands=[
+                "aws s3 cp s3://jiraclone-artifacts-ramy/app-release.zip /tmp/app-release.zip",
+                "unzip -o /tmp/app-release.zip -d /app",
+                "cd /app",
+                "echo \"AWS_REGION=us-east-1\" > .env.local",
+                "echo \"PORT=3000\" >> .env.local",
+                "echo \"S3_UPLOADS_BUCKET=$(aws ssm get-parameter --name /jiraclone/S3_UPLOADS_BUCKET --with-decryption --query Parameter.Value --output text --region us-east-1)\" >> .env.local",
+                "echo \"S3_THUMBNAILS_BUCKET=$(aws ssm get-parameter --name /jiraclone/S3_THUMBNAILS_BUCKET --with-decryption --query Parameter.Value --output text --region us-east-1)\" >> .env.local",
+                "echo \"SNS_TASK_ASSIGNMENTS_TOPIC_ARN=$(aws ssm get-parameter --name /jiraclone/SNS_TOPIC_ARN --with-decryption --query Parameter.Value --output text --region us-east-1)\" >> .env.local",
+                "pm2 restart jira-clone || pm2 start /app/server.js --name jira-clone -i max",
+                "pm2 save"
+              ]' \
               --output text
           done
