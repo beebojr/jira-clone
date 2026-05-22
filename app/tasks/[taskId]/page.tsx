@@ -1,6 +1,7 @@
 import { getTask, getUsers, deleteTask, getMyTasks } from "@/lib/actions/tasks";
 import { getComments } from "@/lib/actions/comments";
-import { getProjects, getTeams } from "@/lib/actions/projects";
+import { getProjects } from "@/lib/actions/projects";
+import { getTeams } from "@/lib/actions/teams";
 import { getAuthUser } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";

@@ -105,10 +105,4 @@ export async function deleteProject(projectId: string): Promise<void> {
   revalidatePath('/dashboard');
 }
 
-export async function getTeams(): Promise<{ teamId: string; teamName: string; managerId: string }[]> {
-  await requireAuth();
-  const { Items } = await docClient.send(new ScanCommand({
-    TableName: AWS_CONFIG.tables.teams,
-  }));
-  return (Items || []) as { teamId: string; teamName: string; managerId: string }[];
-}
+// getTeams() moved to lib/actions/teams.ts

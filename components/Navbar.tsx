@@ -128,6 +128,22 @@ export function Navbar({
               Dashboard
             </Link>
 
+            {/* Teams link — Manager/Admin only */}
+            {isManager && (
+              <Link
+                href="/teams"
+                className={`px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 ${
+                  pathname === "/teams"
+                    ? "bg-surface-2 text-text-primary"
+                    : "text-text-secondary hover:text-text-primary hover:bg-surface-1"
+                }`}
+                style={{ transitionDuration: "var(--transition-fast)" }}
+              >
+                <User className="w-3.5 h-3.5" />
+                Teams
+              </Link>
+            )}
+
             {/* Project Switcher Dropdown */}
             <div ref={projectDropdownRef} className="relative">
               <button
