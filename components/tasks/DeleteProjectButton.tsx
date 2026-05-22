@@ -43,7 +43,7 @@ export function DeleteProjectButton({ projectId, projectName }: DeleteProjectBut
       disabled={isDeleting}
       variant="ghost"
       size="sm"
-      className="absolute top-3 right-3 text-danger hover:bg-danger/10 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+      className="text-danger hover:bg-danger/10 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity -mr-2 h-7 w-7 p-0"
       style={{ transitionDuration: "var(--transition-fast)" }}
       title="Delete project"
       aria-label={`Delete ${projectName}`}
