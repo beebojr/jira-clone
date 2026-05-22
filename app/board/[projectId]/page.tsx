@@ -1,5 +1,6 @@
 import { getTasks, getUsers, getMyTasks } from "@/lib/actions/tasks";
-import { getTeams, getProject, getProjects } from "@/lib/actions/projects";
+import { getTeams } from "@/lib/actions/teams";
+import { getProject, getProjects } from "@/lib/actions/projects";
 import { getAuthUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";

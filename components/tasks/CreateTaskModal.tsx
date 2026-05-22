@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createTask, assignTask } from "@/lib/actions/tasks";
+import { createTask } from "@/lib/actions/tasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,14 +26,13 @@ import { useRouter } from "next/navigation";
 interface CreateTaskModalProps {
   projectId: string;
   userRole: string;
-  users: { userId: string; fullName: string; teamId: string }[];
+  users?: { userId: string; fullName: string; teamId: string }[]; // kept for API compatibility, unused
   teams: { teamId: string; teamName: string }[];
 }
 
 export function CreateTaskModal({
   projectId,
   userRole,
-  users,
   teams,
 }: CreateTaskModalProps) {
   const router = useRouter();
@@ -44,7 +43,6 @@ export function CreateTaskModal({
     description: "",
     priority: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH",
     deadline: "",
-    assigneeId: "unassigned",
     teamId: teams[0]?.teamId || "",
   });
 
@@ -56,7 +54,6 @@ export function CreateTaskModal({
       description: "",
       priority: "MEDIUM",
       deadline: "",
-      assigneeId: "unassigned",
       teamId: teams[0]?.teamId || "",
     });
   }
@@ -67,18 +64,15 @@ export function CreateTaskModal({
     if (!form.teamId) { toast.error("Please select a team"); return; }
     setLoading(true);
     try {
-      const task = await createTask({
+      await createTask({
         title: form.title.trim(),
         description: form.description.trim(),
         priority: form.priority,
         deadline: form.deadline ? form.deadline + "T00:00:00.000Z" : "",
         projectId,
         teamId: form.teamId,
-        assigneeId: form.assigneeId === "unassigned" ? "unassigned" : form.assigneeId,
+        assigneeId: "unassigned",
       });
-      if (form.assigneeId && form.assigneeId !== "unassigned") {
-        await assignTask(task.taskId, form.assigneeId);
-      }
       toast.success("Task created!");
       setOpen(false);
       resetForm();
@@ -92,7 +86,6 @@ export function CreateTaskModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) resetForm(); }}>
-      {/* Base UI DialogTrigger: render prop specifies the host element */}
       <DialogTrigger
         render={
           <Button
@@ -120,6 +113,7 @@ export function CreateTaskModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          {/* Title */}
           <div className="space-y-1.5">
             <label htmlFor="task-title" className="text-sm font-medium text-text-secondary">
               Title <span className="text-danger">*</span>
@@ -135,6 +129,7 @@ export function CreateTaskModal({
             />
           </div>
 
+          {/* Description */}
           <div className="space-y-1.5">
             <label htmlFor="task-description" className="text-sm font-medium text-text-secondary">
               Description
@@ -149,10 +144,14 @@ export function CreateTaskModal({
             />
           </div>
 
+          {/* Priority + Team */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-text-secondary">Priority</label>
-              <Select value={form.priority} onValueChange={(v) => { if (v) setForm({ ...form, priority: v as "LOW" | "MEDIUM" | "HIGH" }); }}>
+              <Select
+                value={form.priority}
+                onValueChange={(v) => { if (v) setForm({ ...form, priority: v as "LOW" | "MEDIUM" | "HIGH" }); }}
+              >
                 <SelectTrigger className="w-full bg-surface-2 border-border-default text-text-primary">
                   <SelectValue>
                     {(value) => {
@@ -168,9 +167,15 @@ export function CreateTaskModal({
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-secondary">Team <span className="text-danger">*</span></label>
-              <Select value={form.teamId} onValueChange={(v) => { if (v) setForm({ ...form, teamId: v }); }}>
+              <label className="text-sm font-medium text-text-secondary">
+                Team <span className="text-danger">*</span>
+              </label>
+              <Select
+                value={form.teamId}
+                onValueChange={(v) => { if (v) setForm({ ...form, teamId: v }); }}
+              >
                 <SelectTrigger className="w-full bg-surface-2 border-border-default text-text-primary">
                   <SelectValue>
                     {(value) => {
@@ -188,39 +193,16 @@ export function CreateTaskModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-text-secondary">Assignee</label>
-              <Select value={form.assigneeId} onValueChange={(v) => { if (v) setForm({ ...form, assigneeId: v }); }}>
-                <SelectTrigger className="w-full bg-surface-2 border-border-default text-text-primary">
-                  <SelectValue placeholder="Select user">
-                    {(value) => {
-                      if (!value || value === "unassigned") return <span className="text-text-tertiary italic">Unassigned</span>;
-                      const u = users.find((user) => user.userId === value);
-                      return u ? `${u.fullName} (${u.teamId})` : "Select user";
-                    }}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="bg-surface-1 border-border-default max-h-[200px]">
-                  <SelectItem value="unassigned" className="text-text-tertiary italic">Unassigned</SelectItem>
-                  {users.map((u) => (
-                    <SelectItem key={u.userId} value={u.userId}>
-                      {`${u.fullName} (${u.teamId})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="task-deadline" className="text-sm font-medium text-text-secondary">Deadline</label>
-              <Input
-                id="task-deadline"
-                type="date"
-                value={form.deadline}
-                onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                className="bg-surface-2 border-border-default focus:border-brand-hover transition-colors text-text-primary dark:[color-scheme:dark]"
-              />
-            </div>
+          {/* Deadline */}
+          <div className="space-y-1.5">
+            <label htmlFor="task-deadline" className="text-sm font-medium text-text-secondary">Deadline</label>
+            <Input
+              id="task-deadline"
+              type="date"
+              value={form.deadline}
+              onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+              className="bg-surface-2 border-border-default focus:border-brand-hover transition-colors text-text-primary dark:[color-scheme:dark]"
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t border-border-subtle">

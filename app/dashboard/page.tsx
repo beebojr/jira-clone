@@ -1,4 +1,5 @@
-import { getProjects, getTeams } from "@/lib/actions/projects";
+import { getProjects } from "@/lib/actions/projects";
+import { getTeams } from "@/lib/actions/teams";
 import { getTasks, getMyTasks, getRecentAuditLogs } from "@/lib/actions/tasks";
 import { getAuthUser } from "@/lib/auth";
 import { redirect } from "next/navigation";

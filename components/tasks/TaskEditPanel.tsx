@@ -155,7 +155,7 @@ export function TaskEditPanel({ task, users }: TaskEditPanelProps) {
                 {(value) => {
                   if (!value || value === "unassigned") return <span className="text-text-tertiary italic">Unassigned</span>;
                   const u = users.find((user) => user.userId === value);
-                  return u ? `${u.fullName} (${u.teamId})` : "Select assignee";
+                  return u ? u.fullName : "Select assignee";
                 }}
               </SelectValue>
             </SelectTrigger>
@@ -163,11 +163,15 @@ export function TaskEditPanel({ task, users }: TaskEditPanelProps) {
               <SelectItem value="unassigned" className="text-text-tertiary italic">
                 Unassigned
               </SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.userId} value={user.userId}>
-                  {`${user.fullName} (${user.teamId})`}
-                </SelectItem>
-              ))}
+              {users.length === 0 ? (
+                <div className="px-3 py-2 text-xs text-text-tertiary italic">No members in this team</div>
+              ) : (
+                users.map((user) => (
+                  <SelectItem key={user.userId} value={user.userId}>
+                    {user.fullName}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>

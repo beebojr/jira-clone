@@ -1,25 +1,17 @@
-import { getTask, getUsers, deleteTask, getMyTasks } from "@/lib/actions/tasks";
+import { getTask, getUsers, getMyTasks } from "@/lib/actions/tasks";
 import { getComments } from "@/lib/actions/comments";
-import { getProjects, getTeams } from "@/lib/actions/projects";
+import { getProjects } from "@/lib/actions/projects";
+import { getTeams } from "@/lib/actions/teams";
 import { getAuthUser } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Trash2, Clock, Layers, LogOut, User } from "lucide-react";
+import { Clock, Layers, User } from "lucide-react";
 import { CommentThread } from "@/components/tasks/CommentThread";
 import { ImageUpload } from "@/components/tasks/ImageUpload";
 import { TaskEditPanel } from "@/components/tasks/TaskEditPanel";
 import { TaskStatusControl } from "@/components/tasks/TaskStatusControl";
-import { signOut } from "@/lib/actions/auth";
 import { Navbar } from "@/components/Navbar";
-
-// Named server action for delete — avoids inline closure issues
-async function handleDeleteTask(taskId: string, projectId: string) {
-  "use server";
-  await deleteTask(taskId);
-  redirect(`/board/${projectId}`);
-}
+import { DeleteTaskButton } from "@/components/tasks/DeleteTaskButton";
 
 const STATUS_COLORS: Record<string, string> = {
   TODO: "bg-status-todo/15 text-text-secondary border-status-todo/20",
@@ -58,15 +50,11 @@ export default async function TaskDetailPage({
   ]);
 
   const isManager = user.role === "MANAGER" || user.role === "ADMIN";
-  const isAssigned = task.assigneeId === user.userId;
   const canChangeStatus = true; // Everyone who can view the task can change its status
   const isOverdue =
     task.deadline &&
     new Date(task.deadline) < new Date() &&
     task.status !== "DONE";
-
-  // Bind the server action with the specific task params
-  const deleteThisTask = handleDeleteTask.bind(null, task.taskId, task.projectId);
 
   return (
     <div className="min-h-screen bg-surface-0 text-text-primary">
@@ -120,11 +108,10 @@ export default async function TaskDetailPage({
               {task.deadline && (
                 <Badge
                   variant="outline"
-                  className={`bg-surface-1 border text-xs flex items-center gap-1.5 ${
-                    isOverdue
-                      ? "border-danger/30 text-danger"
-                      : "border-border-default text-text-secondary"
-                  }`}
+                  className={`bg-surface-1 border text-xs flex items-center gap-1.5 ${isOverdue
+                    ? "border-danger/30 text-danger"
+                    : "border-border-default text-text-secondary"
+                    }`}
                 >
                   <Clock className="w-3 h-3" />
                   {isOverdue ? "Overdue · " : "Due: "}
@@ -182,18 +169,13 @@ export default async function TaskDetailPage({
 
           {/* Delete button (manager/admin only) */}
           {isManager && (
-            <form action={deleteThisTask} className="flex-shrink-0">
-              <Button
-                type="submit"
-                variant="destructive"
-                size="sm"
-                className="bg-danger hover:bg-danger-hover text-white w-full sm:w-auto"
-                style={{ transitionDuration: "var(--transition-fast)" }}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Task
-              </Button>
-            </form>
+            <div className="flex-shrink-0">
+              <DeleteTaskButton
+                taskId={task.taskId}
+                projectId={task.projectId}
+                taskTitle={task.title}
+              />
+            </div>
           )}
         </div>
 

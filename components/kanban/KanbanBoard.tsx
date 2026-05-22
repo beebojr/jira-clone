@@ -484,7 +484,6 @@ export function KanbanBoard({
                             ) : (
                               <span className="text-[11px] text-text-tertiary italic font-medium">Unassigned</span>
                             )}
-
                             {/* Deadline */}
                             {task.deadline && (
                               <div
