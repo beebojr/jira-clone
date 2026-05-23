@@ -10,6 +10,13 @@
 
 ---
 
+## Demo Video
+
+**Link** <https://drive.google.com/file/d/17z06RA5a21ol39PcuxzxAon5I0XHw62f/view?usp=sharing>
+
+---
+---
+
 ## Deployed Application
 
 **Live URL:** <http://JiraClone-ALB-1154595828.us-east-1.elb.amazonaws.com>
